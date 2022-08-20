@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Explotación de un PATH Hijacking - Walxom Network</title>
+<meta name="description" content="En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para encontrar el directorio donde poner los mods de Minecraft o %Temp% para borrar los archivos temporales (si eres de Microsoft).">
+
+
+  <meta name="author" content="Jose Salinas">
+  
+  <meta property="article:author" content="Jose Salinas">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="Walxom Network">
+<meta property="og:title" content="Explotación de un PATH Hijacking">
+<meta property="og:url" content="http://localhost:4000/privesc/explotacion-de-un-path-hijacking/">
+
+
+  <meta property="og:description" content="En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para encontrar el directorio donde poner los mods de Minecraft o %Temp% para borrar los archivos temporales (si eres de Microsoft).">
+
+
+
+  <meta property="og:image" content="https://i.ibb.co/kxjF9wz/path-hijacking.png">
+
+
+
+  <meta name="twitter:site" content="@walxom">
+  <meta name="twitter:title" content="Explotación de un PATH Hijacking">
+  <meta name="twitter:description" content="En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para encontrar el directorio donde poner los mods de Minecraft o %Temp% para borrar los archivos temporales (si eres de Microsoft).">
+  <meta name="twitter:url" content="http://localhost:4000/privesc/explotacion-de-un-path-hijacking/">
+
+  
+    <meta name="twitter:card" content="summary">
+    
+      <meta name="twitter:image" content="https://i.ibb.co/kxjF9wz/path-hijacking.png">
+    
+  
+
+  
+
+
+
+  <meta property="article:published_time" content="2022-01-01T00:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="http://localhost:4000/privesc/explotacion-de-un-path-hijacking/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "Walxom",
+      "url": "http://localhost:4000/",
+      "sameAs": ["https://github.com/walxom","https://twitter.com/walxom","https://www.linkedin.com/in/walxom","https://app.hackthebox.com/profile/685524"]
+    
+  }
+</script>
+
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Walxom Network Feed">
+
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Saltar a navegación principal</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Saltar a contenido</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Saltar a pie</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo"><img src="/assets/images/QR-code.png" alt="Walxom Network" style="pointer-events: none; user-select: none;"></a>
+        
+        <a class="site-title">
+          Walxom Network
+          <span class="site-subtitle">Don't limit yourself, think outside the box.</span>
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Inicio</a>
+            </li><li class="masthead__menu-item">
+              <a href="/categories/">Categorías</a>
+            </li><li class="masthead__menu-item">
+              <a href="/tags/">Etiquetas</a>
+            </li></ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Alternar búsqueda</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Alternar menú</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/assets/images/bio-photo.jpg" alt="Jose Salinas" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Jose Salinas</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Entusiasta y apasionado a llevar la tecnología al límite.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Seguir</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">127.0.0.1</span>
+        </li>
+      
+
+      
+        
+          
+        
+          
+        
+          
+            <li><a href="https://twitter.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span class="label">Twitter</span></a></li>
+          
+        
+          
+            <li><a href="https://github.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://www.linkedin.com/in/walxom/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span class="label">LinkedIn</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Explotación de un PATH Hijacking">
+    <meta itemprop="description" content="En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para encontrar el directorio donde poner los mods de Minecraft o %Temp% para borrar los archivos temporales (si eres de Microsoft).">
+    <meta itemprop="datePublished" content="2022-01-01T00:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Explotación de un PATH Hijacking
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right ">
+            <nav class="toc">
+              <header><h4 class="nav__title"><i class="fas fa-file-alt"></i> En esta página</h4></header>
+              <ul class="toc__menu"><li><a href="#variables-de-entorno-comunes-en-linux">Variables de entorno comunes en Linux</a></li><li><a href="#crear-o-modificar-una-variable-de-entorno-en-linux">Crear o modificar una variable de entorno en Linux</a></li><li><a href="#eliminar-una-variable-de-entorno-en-linux">Eliminar una variable de entorno en Linux</a></li><li><a href="#variable-de-entorno-path-en-linux">Variable de entorno PATH en Linux</a></li><li><a href="#ruta-absoluta-y-relativa">Ruta absoluta y relativa</a></li><li><a href="#qué-es-el-path-hijacking">¿Qué es el Path Hijacking?</a></li><li><a href="#privesc--path-hijacking">PrivEsc / Path Hijacking</a><ul><li><a href="#suid--sgid-executables---environment-variables">SUID / SGID Executables - Environment Variables</a></li></ul></li></ul>
+
+            </nav>
+          </aside>
+        
+        <p>En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea <code class="language-plaintext highlighter-rouge">%AppData%</code> para encontrar el directorio donde poner los mods de Minecraft o <code class="language-plaintext highlighter-rouge">%Temp%</code> para borrar los archivos temporales (si eres de Microsoft).</p>
+
+<p>Las variables de entorno son valores dinámicos que afectan a los programas o procesos que se ejecutan en un sistema operativo. Estas se pueden, modificar, guardar y eliminar.</p>
+
+<p>En Linux puedes ver la lista completa de variables de entorno de muchas formas, pero las más utilizadas son con el comando <code class="language-plaintext highlighter-rouge">env</code>, <code class="language-plaintext highlighter-rouge">set</code>, <code class="language-plaintext highlighter-rouge">printenv</code>.</p>
+
+<p><img src="https://i.ibb.co/ZKtDH90/1.png" alt="env" class="acc" /></p>
+
+<h2 id="variables-de-entorno-comunes-en-linux">Variables de entorno comunes en Linux</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>PATH</td>
+      <td>contiene una lista ordenada de rutas donde se buscaran ejecutables.</td>
+    </tr>
+    <tr>
+      <td>HOME</td>
+      <td>contiene el directorio de inicio del usuario actual.</td>
+    </tr>
+    <tr>
+      <td>SHELL</td>
+      <td>contiene el nombre de la shell interactiva que se está ejecutando actualmente.</td>
+    </tr>
+    <tr>
+      <td>TERM</td>
+      <td>contiene el nombre de la terminal que se está ejecutando.</td>
+    </tr>
+    <tr>
+      <td>HOSTNAME</td>
+      <td>contiene el nombre de host del sistema.</td>
+    </tr>
+    <tr>
+      <td>USER</td>
+      <td>contiene el nombre del usuario actual.</td>
+    </tr>
+    <tr>
+      <td>PWD</td>
+      <td>contiene la ruta al directorio de trabajo actual.</td>
+    </tr>
+    <tr>
+      <td>LANG</td>
+      <td>contiene el idioma por defecto del sistema.</td>
+    </tr>
+    <tr>
+      <td>RANDOM</td>
+      <td>contiene un valor de número aleatorio.</td>
+    </tr>
+    <tr>
+      <td>PS1</td>
+      <td>contiene el prompt actual.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Para mí la manera más fácil de imprimir el contenido de una variable en específica es con: <code class="language-plaintext highlighter-rouge">echo $&lt;VARNAME&gt;</code></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span><span class="nb">echo</span> <span class="nv">$PATH</span>
+
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+</code></pre></div></div>
+
+<p>pero también existe otra forma como con:  <code class="language-plaintext highlighter-rouge">printenv &lt;VARNAME&gt;</code></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span><span class="nb">printenv </span>PATH
+
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+</code></pre></div></div>
+
+<p>hay muchos más comandos que te pueden imprimir las variables de entorno, pero estos dos son los más comunes e usados.</p>
+
+<h2 id="crear-o-modificar-una-variable-de-entorno-en-linux">Crear o modificar una variable de entorno en Linux</h2>
+
+<p>El comando <code class="language-plaintext highlighter-rouge">export</code> sirve para exportar variables a procesos secundarios. La sintaxis básica de este comando se vería así: <code class="language-plaintext highlighter-rouge">export &lt;VARNAME&gt;=&lt;value&gt;</code>. Se puede modificar una variable de entorno de la siguiente manera:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~$ export TERM=xterm
+user@debian:~$ echo $TERM
+xterm
+</code></pre></div></div>
+
+<p>Para crear sería lo mismo que modificar una variable de entorno nueva.</p>
+
+<h2 id="eliminar-una-variable-de-entorno-en-linux">Eliminar una variable de entorno en Linux</h2>
+
+<p>Se puede eliminar una variable de entorno con en Linux con el comando <code class="language-plaintext highlighter-rouge">unset</code>, de la siguiente manera:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span><span class="nb">unset </span>PATH
+user@debian:~<span class="nv">$ </span><span class="nb">echo</span> <span class="nv">$PATH</span>
+
+</code></pre></div></div>
+
+<p>Ya habiendo aprendido un poco sobre las variables de entorno, puedo explicar como se puede llegar a escalar privilegios con estas, en especial con una.</p>
+
+<h2 id="variable-de-entorno-path-en-linux">Variable de entorno PATH en Linux</h2>
+
+<p>Se usa para ubicar comandos o ficheros binarios dentro de la jerarquía de directorios. El <code class="language-plaintext highlighter-rouge">PATH</code> normalmente se crea en un conjunto de directorios fijos donde el sistema siempre buscara comandos que un usuario escriba. Estas tienen orden de prioridad que empieza desde la derecha hasta la izquierda.</p>
+
+<h2 id="ruta-absoluta-y-relativa">Ruta absoluta y relativa</h2>
+
+<p>Esto son dos conceptos básicos que debemos de saber para entender como funciona este ataque.</p>
+
+<ul>
+  <li>
+    <p><strong>La ruta absoluta:</strong> siempre contiene el elemento raíz y la lista completa de directorios necesaria para ubicar el archivo.</p>
+  </li>
+  <li>
+    <p><strong>La ruta relativa:</strong> debe combinarse con otra ruta para acceder a un archivo. Por ejemplo, Downloads/Firefox es una ruta relativa.</p>
+  </li>
+</ul>
+
+<h2 id="qué-es-el-path-hijacking">¿Qué es el Path Hijacking?</h2>
+
+<p>Como su propio nombre indica Path Hijacking (Secuestro de rutas), este ataque consiste en secuestrar las rutas habituales definidas por la variable de entorno PATH, donde en vez de buscar los comandos por <code class="language-plaintext highlighter-rouge">/usr/local/bin:/usr/bin:/bin</code>, nosotros podemos decirle en donde buscar. Esto en un fichero binario que contenga el permiso SUID asignado, puede ser muy peligroso.</p>
+
+<h2 id="privesc--path-hijacking">PrivEsc / Path Hijacking</h2>
+
+<p>Para demostrar y poner en práctica esta técnica, voy a escoger un ejercicio del módulo <a href="https://tryhackme.com/room/linuxprivesc">Linux PrivEsc</a> de la plataforma <a href="https://tryhackme.com/">TryHackMe</a>.</p>
+
+<p><img src="https://i.ibb.co/Gt0FkZC/linux-privesc.png" alt="Tasks" class="acc" /></p>
+
+<h3 id="suid--sgid-executables---environment-variables">SUID / SGID Executables - Environment Variables</h3>
+
+<p>Para empezar vamos a ver que contiene el <code class="language-plaintext highlighter-rouge">PATH</code> y su orden de prioridad de las rutas.</p>
+
+<p><img src="https://i.ibb.co/cKqgYkQ/2.png" alt="printenv" class="acc" /></p>
+
+<p>No vemos nada raro, son las rutas habituales de un sistema operativo GNU/Linux. El laboratorio nos dice que tiene un archivo binario llamado <code class="language-plaintext highlighter-rouge">suid-env</code> en la ruta <code class="language-plaintext highlighter-rouge">/usr/local/bin/</code>:</p>
+
+<p><img src="https://i.ibb.co/qkLZBHc/3.png" alt="suid-env" class="acc" /></p>
+
+<p>si le pasamos el archivo ejecutable al comando <code class="language-plaintext highlighter-rouge">strings</code>, este nos permitirá ver los caracteres legibles para nosotros dentro de cualquier archivo:</p>
+
+<p><img src="https://i.ibb.co/RQwsFMz/4.png" alt="strings" class="acc" /></p>
+
+<p>Como podemos ver esta ejecutando <code class="language-plaintext highlighter-rouge">service apache2 start</code>, y no está especificando la ruta absoluta del comando <code class="language-plaintext highlighter-rouge">service</code>, y por ende significa que está usando el <code class="language-plaintext highlighter-rouge">PATH</code> para encontrar el comando. Vemos también que el ejecutable tiene asignado el permiso SUID y su propietario es root.</p>
+
+<p>Lo que haremos será remplazar el comando <code class="language-plaintext highlighter-rouge">service</code> para que en vez que inicie un servicio, le asigne el permiso SUID a la <code class="language-plaintext highlighter-rouge">bash</code>.</p>
+
+<p>Nos metemos al directorio <code class="language-plaintext highlighter-rouge">/tmp</code> y con el comando <code class="language-plaintext highlighter-rouge">echo</code> creamos un archivo que se llame <code class="language-plaintext highlighter-rouge">service</code>, dentro de el voy a poner <code class="language-plaintext highlighter-rouge">chmod u+s /bin/bash</code> para que le asigne el permiso SUID a la <code class="language-plaintext highlighter-rouge">bash</code>, este es el archivo que remplazara al comando <code class="language-plaintext highlighter-rouge">service</code> de la ruta de <code class="language-plaintext highlighter-rouge">/usr/bin</code>. Para finalizar le asignaremos el permiso de ejecución al “nuevo comando” con <code class="language-plaintext highlighter-rouge">chmod +x service</code> :</p>
+
+<p><img src="https://i.ibb.co/d0gH0LQ/5.png" alt="service" class="acc" /></p>
+
+<p>Ya teniendo el “nuevo comando” listo, podemos agregarle una nueva ruta a nuestro PATH y ponerla como primera en la orden de prioridad. En este caso como yo tengo el nuevo comando <code class="language-plaintext highlighter-rouge">service</code> en el directorio <code class="language-plaintext highlighter-rouge">/tmp</code>, lo exportaré como <code class="language-plaintext highlighter-rouge">export PATH=/tmp:$PATH</code>:</p>
+
+<p><img src="https://i.ibb.co/C73Ts28/6.png" alt="export PATH - new" class="acc" /></p>
+
+<p>Ahora llego la hora de la acción, si ejecutamos el <code class="language-plaintext highlighter-rouge">suid-env</code> podemos ver que en vez de arrancar el servicio apache, nos asignó el permiso SUID a la <code class="language-plaintext highlighter-rouge">/bin/bash</code>:</p>
+
+<p><img src="https://i.ibb.co/pz16rD0/7.png" alt="/bin/bash" class="acc" /></p>
+
+<p>y así de fácil es como escalamos privilegios:</p>
+
+<p><img src="https://i.ibb.co/DWvVgX9/8.png" alt="whoami" class="acc" /></p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Etiquetas: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/#linux" class="page__taxonomy-item" rel="tag">linux</a><span class="sep">, </span>
+    
+      <a href="/tags/#path" class="page__taxonomy-item" rel="tag">path</a><span class="sep">, </span>
+    
+      <a href="/tags/#privesc" class="page__taxonomy-item" rel="tag">privesc</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categorías: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/#privesc" class="page__taxonomy-item" rel="tag">PrivEsc</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Actualizado:</strong> <time datetime="2022-01-01T00:00:00+00:00">January 1, 2022</time></p>
+
+
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Compartir en</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?via=walxom&text=Explotaci%C3%B3n+de+un+PATH+Hijacking%20http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-un-path-hijacking%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-un-path-hijacking%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-un-path-hijacking%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/privesc/explotacion-de-tareas-cron/" class="pagination--pager" title="Explotación de tareas Cron
+">Anterior</a>
+    
+    
+      <a href="/privesc/explotacion-de-las-capabilities/" class="pagination--pager" title="Explotación de las Capabilities
+">Siguiente</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">Puede que también te interese</h4>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/Lt5fgcZ/explotacion-de-las-capabilities.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-las-capabilities/" rel="permalink">Explotación de las Capabilities
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.
+
+</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/dPz847N/explotacion-de-tareas-cron.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-tareas-cron/" rel="permalink">Explotación de tareas Cron
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">A menudo hay formas de hacer las cosas de manera más rápida, como por ejemplo, las tareas. Algunos webmasters en vez de hacerlo manualmente prefieren ahorrar...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/bLwX9yS/explotacion-de-permisos-suid.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-permisos-suid/" rel="permalink">Explotación de permisos SUID
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.
+
+</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap"><form class="search-content__form" onkeydown="return event.key != 'Enter';">
+    <label class="sr-only" for="search">
+      Términos de búsqueda...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Términos de búsqueda..." />
+  </form>
+  <div id="results" class="results"></div></div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Seguir:</strong></li>
+    
+
+    
+      
+        
+          <li><a href="https://twitter.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i> Twitter</a></li>
+        
+      
+        
+          <li><a href="https://github.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://www.linkedin.com/in/walxom/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i> LinkedIn</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2022 Walxom. Funciona con <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Explotación de permisos SUID - Walxom Network</title>
+<meta name="description" content="Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.">
+
+
+  <meta name="author" content="Jose Salinas">
+  
+  <meta property="article:author" content="Jose Salinas">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="Walxom Network">
+<meta property="og:title" content="Explotación de permisos SUID">
+<meta property="og:url" content="http://localhost:4000/privesc/explotacion-de-permisos-suid/">
+
+
+  <meta property="og:description" content="Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.">
+
+
+
+  <meta property="og:image" content="https://i.ibb.co/bLwX9yS/explotacion-de-permisos-suid.png">
+
+
+
+  <meta name="twitter:site" content="@walxom">
+  <meta name="twitter:title" content="Explotación de permisos SUID">
+  <meta name="twitter:description" content="Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.">
+  <meta name="twitter:url" content="http://localhost:4000/privesc/explotacion-de-permisos-suid/">
+
+  
+    <meta name="twitter:card" content="summary">
+    
+      <meta name="twitter:image" content="https://i.ibb.co/bLwX9yS/explotacion-de-permisos-suid.png">
+    
+  
+
+  
+
+
+
+  <meta property="article:published_time" content="2021-12-09T00:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="http://localhost:4000/privesc/explotacion-de-permisos-suid/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "Walxom",
+      "url": "http://localhost:4000/",
+      "sameAs": ["https://github.com/walxom","https://twitter.com/walxom","https://www.linkedin.com/in/walxom","https://app.hackthebox.com/profile/685524"]
+    
+  }
+</script>
+
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Walxom Network Feed">
+
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Saltar a navegación principal</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Saltar a contenido</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Saltar a pie</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo"><img src="/assets/images/QR-code.png" alt="Walxom Network" style="pointer-events: none; user-select: none;"></a>
+        
+        <a class="site-title">
+          Walxom Network
+          <span class="site-subtitle">Don't limit yourself, think outside the box.</span>
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Inicio</a>
+            </li><li class="masthead__menu-item">
+              <a href="/categories/">Categorías</a>
+            </li><li class="masthead__menu-item">
+              <a href="/tags/">Etiquetas</a>
+            </li></ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Alternar búsqueda</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Alternar menú</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/assets/images/bio-photo.jpg" alt="Jose Salinas" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Jose Salinas</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Entusiasta y apasionado a llevar la tecnología al límite.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Seguir</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">127.0.0.1</span>
+        </li>
+      
+
+      
+        
+          
+        
+          
+        
+          
+            <li><a href="https://twitter.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span class="label">Twitter</span></a></li>
+          
+        
+          
+            <li><a href="https://github.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://www.linkedin.com/in/walxom/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span class="label">LinkedIn</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Explotación de permisos SUID">
+    <meta itemprop="description" content="Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.">
+    <meta itemprop="datePublished" content="2021-12-09T00:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Explotación de permisos SUID
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right ">
+            <nav class="toc">
+              <header><h4 class="nav__title"><i class="fas fa-file-alt"></i> En esta página</h4></header>
+              <ul class="toc__menu"><li><a href="#permisos-suid">Permisos SUID</a></li><li><a href="#gtfobins">GTFOBINS</a><ul><li><a href="#privesc--suid---find">PrivEsc / SUID - find</a></li><li><a href="#explicación">Explicación</a></li></ul></li><li><a href="#buscar-ficheros-que-tengan-el-permiso-suid">Buscar ficheros que tengan el permiso SUID</a></li></ul>
+
+            </nav>
+          </aside>
+        
+        <p>Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.</p>
+
+<h2 id="permisos-suid">Permisos SUID</h2>
+
+<p>El bit de <strong>SUID/setuid</strong> (Set User ID) se activa sobre un fichero añadiéndole <code class="language-plaintext highlighter-rouge">4000</code> a la representación octal de los permisos de un archivo y agregándole permisos de ejecución al propietario, al hacer esto en lugar de la <code class="language-plaintext highlighter-rouge">x</code> aparecerá una <code class="language-plaintext highlighter-rouge">s</code> o una <code class="language-plaintext highlighter-rouge">S</code> si no hemos otorgado el permiso de ejecución correspondiente (en este caso el bit no tiene efecto):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span><span class="nb">chmod </span>4100 file
+</code></pre></div></div>
+
+<p><img src="https://i.ibb.co/mtRxbD1/f-4100.png" alt="SUID &quot;s&quot;" class="acc" /></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span><span class="nb">chmod </span>4000 file
+</code></pre></div></div>
+
+<p><img src="https://i.ibb.co/y6HcLcj/f-4000.png" alt="SUID &quot;S&quot;" class="acc" /></p>
+
+<p>El bit <strong>SUID</strong> activado sobre un fichero indica que todo aquel que ejecute el archivo va a tener durante la ejecución los mismos privilegios que quién lo creó, por ejemplo: si el administrador crea un fichero y lo <code class="language-plaintext highlighter-rouge">_setuida_</code>, todo aquel usuario que lo ejecute va a disponer de sus permisos hasta que el programa finalice.</p>
+
+<p>Un ejemplo sería este código:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+</span>
+<span class="n">main</span><span class="p">(){</span>
+	<span class="n">printf</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">UID: %d, EUID: %d</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="n">getuid</span><span class="p">(),</span><span class="n">geteuid</span><span class="p">());</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Como usuario root lo compilamos y le agregamos permisos <strong>SUID</strong>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>cc &lt;filename&gt;.c <span class="nt">-o</span> suid
+user@debian:~<span class="nv">$ </span><span class="nb">chmod </span>u+s ./suid
+</code></pre></div></div>
+
+<p>Ahora nos convertiremos en un usuario normal y ejecutaremos el programa que hemos compilado, el resultado debería ser algo así:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>./sys
+
+UID: 1000, EUID: 0
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>UID</strong>: Es el usuario original</p>
+
+  <p><strong>EUID</strong>: Es el usuario al que cambiaste</p>
+</blockquote>
+
+<h2 id="gtfobins">GTFOBINS</h2>
+
+<p><a href="https://gtfobins.github.io/">GTFOBINS</a> es una lista seleccionada de binarios de <strong>Unix</strong> que se pueden utilizar para eludir las restricciones de seguridad locales en sistemas mal configurados. Mayormente, esta página se usa como fuente de información para escalar privilegios en los sistemas <strong>Linux</strong>.</p>
+
+<p>Vamos a escoger un binario de sus listas e intentaremos escalaremos privilegios. En este caso para hacerlo muy sencillo escogeremos el binario <code class="language-plaintext highlighter-rouge">find</code>:</p>
+
+<p><img src="https://i.ibb.co/Stb59sz/find-suid-0.png" alt="Find - SUID" class="acc" /></p>
+
+<blockquote>
+  <p>Agregar el permiso SUID a <code class="language-plaintext highlighter-rouge">find</code>: <code class="language-plaintext highlighter-rouge">chmod u+s /usr/bin/find</code></p>
+</blockquote>
+
+<p>Leeremos y ejecutaremos lo que nos dice en el apartado de <strong>SUID</strong>:</p>
+
+<p><img src="https://i.ibb.co/Ky20hgL/find-suid-1.png" alt="Find - SUID" class="acc" /></p>
+
+<h3 id="privesc--suid---find">PrivEsc / SUID - find</h3>
+
+<p><br />
+<img src="https://i.ibb.co/8mmp0Zk/find-suid-2.png" alt="Find - SUID" class="acc" />
+<br /></p>
+
+<h3 id="explicación">Explicación</h3>
+
+<p>Solo es cuestión de analizar:</p>
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">find</code> tiene un parámetro que te permite ejecutar comandos a nivel de sistema.</li>
+  <li>También tiene el permiso <code class="language-plaintext highlighter-rouge">suid</code> agregado, lo que significa que podemos ejecutar el programa/comando como su propietario.</li>
+  <li>Viendo quien es el propietario de <code class="language-plaintext highlighter-rouge">find</code> nos damos cuenta de que es  <code class="language-plaintext highlighter-rouge">root</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">bash</code> tiene el  parámetro  <code class="language-plaintext highlighter-rouge">-p</code> que te permite convertirte en el usuario propietario de su binario por si tiene el permiso <code class="language-plaintext highlighter-rouge">suid</code>.</li>
+</ol>
+
+<p>Sabiendo esto podemos llegar a la conclusión que debemos abusar del parámetro  <code class="language-plaintext highlighter-rouge">-exec</code> y ejecutar el comando <code class="language-plaintext highlighter-rouge">bash -p</code> para convertirnos en su propietario, en este caso <code class="language-plaintext highlighter-rouge">root</code>.</p>
+
+<h2 id="buscar-ficheros-que-tengan-el-permiso-suid">Buscar ficheros que tengan el permiso SUID</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>find / <span class="nt">-perm</span> <span class="nt">-4000</span> <span class="nt">-ls</span> 2&gt;/dev/null
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">Parámetro</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">find</td>
+      <td>buscar archivos en una jerarquía de directorios</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">/</td>
+      <td>desde que directorio empezar a buscar</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">-perm -4000</td>
+      <td>especificamos que queremos buscar ficheros que contengan los permisos <code class="language-plaintext highlighter-rouge">4000</code> o SUID</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">-ls</td>
+      <td>seria como ejecutar un <code class="language-plaintext highlighter-rouge">ls -l</code> en cada fichero de salida</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">2&gt;/dev/null</td>
+      <td>que dirija todos los errores al <code class="language-plaintext highlighter-rouge">/dev/null</code></td>
+    </tr>
+  </tbody>
+</table>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Etiquetas: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/#linux" class="page__taxonomy-item" rel="tag">linux</a><span class="sep">, </span>
+    
+      <a href="/tags/#privesc" class="page__taxonomy-item" rel="tag">privesc</a><span class="sep">, </span>
+    
+      <a href="/tags/#suid" class="page__taxonomy-item" rel="tag">suid</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categorías: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/#privesc" class="page__taxonomy-item" rel="tag">PrivEsc</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Actualizado:</strong> <time datetime="2021-12-09T00:00:00+00:00">December 9, 2021</time></p>
+
+
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Compartir en</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?via=walxom&text=Explotaci%C3%B3n+de+permisos+SUID%20http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-permisos-suid%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-permisos-suid%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-permisos-suid%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="#" class="pagination--pager disabled">Anterior</a>
+    
+    
+      <a href="/privesc/explotacion-de-tareas-cron/" class="pagination--pager" title="Explotación de tareas Cron
+">Siguiente</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">Puede que también te interese</h4>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/Lt5fgcZ/explotacion-de-las-capabilities.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-las-capabilities/" rel="permalink">Explotación de las Capabilities
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.
+
+</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/kxjF9wz/path-hijacking.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-un-path-hijacking/" rel="permalink">Explotación de un PATH Hijacking
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para e...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/dPz847N/explotacion-de-tareas-cron.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-tareas-cron/" rel="permalink">Explotación de tareas Cron
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">A menudo hay formas de hacer las cosas de manera más rápida, como por ejemplo, las tareas. Algunos webmasters en vez de hacerlo manualmente prefieren ahorrar...</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap"><form class="search-content__form" onkeydown="return event.key != 'Enter';">
+    <label class="sr-only" for="search">
+      Términos de búsqueda...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Términos de búsqueda..." />
+  </form>
+  <div id="results" class="results"></div></div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Seguir:</strong></li>
+    
+
+    
+      
+        
+          <li><a href="https://twitter.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i> Twitter</a></li>
+        
+      
+        
+          <li><a href="https://github.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://www.linkedin.com/in/walxom/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i> LinkedIn</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2022 Walxom. Funciona con <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+
+
+  </body>
+</html>

