@@ -1,6 +1,6 @@
 ---
 title: Explotación de tareas Cron
-date: 2021-12-28 16:46:23 +0700
+date: 2021-12-28 16:46:23 -0500
 categories: [Privilege Escalation, Linux]
 tags: [privesc,linux,cron]
 image:

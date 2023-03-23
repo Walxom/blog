@@ -1,6 +1,6 @@
 ---
 title: Explotación de permisos SUID
-date: 2021-12-27 10:24:23 +0700
+date: 2021-12-27 10:24:23 -0500
 categories: [Privilege Escalation, Linux]
 tags: [privesc,linux,suid]
 image:

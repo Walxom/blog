@@ -1,6 +1,6 @@
 ---
 title: Explotación de un PATH Hijacking
-date: 2021-12-29 17:59:23 +0700
+date: 2021-12-29 17:59:23 -0500
 categories: [Privilege Escalation, Linux]
 tags: [privesc,linux,path-hijacking]
 image:

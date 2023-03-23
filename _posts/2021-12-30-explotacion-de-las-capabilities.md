@@ -1,6 +1,6 @@
 ---
 title: Explotación de las Capabilities
-date: 2021-12-30 12:15:09 +0700
+date: 2021-12-30 12:15:09 -0500
 categories: [Privilege Escalation, Linux]
 tags: [privesc,linux,capabilities]
 image:
