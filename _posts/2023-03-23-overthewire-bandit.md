@@ -331,14 +331,14 @@ Al final, se utiliza el comando `zcat` para mostrar el contenido del archivo des
 ![OverTheWire - Bandit12](https://i.ibb.co/2P8FznQ/StLGf6x.png)
 
 > Es importante mencionar que esta solución es un poco más vaga y menos precisa que la solución comun, pero puede resultar útil en situaciones en las que se desconoce la cantidad de veces que el archivo ha sido comprimido y en qué formato.
-{:. prompt-warning }
+{: .prompt-warning }
 
 ## Level 13 → Level 14
 
 La contraseña para el siguiente nivel se almacena en `/etc/bandit_pass/bandit14` y sólo puede ser leída por el usuario **bandit14**. Para este nivel, no obtienes la siguiente contraseña, pero obtienes una clave SSH privada que puede ser usada para ingresar al siguiente nivel.
 
-> **Nota:** localhost es un nombre de host que se refiere a la máquina en la que estás trabajando.
-{:. prompt-info }
+> Nota: localhost es un nombre de host que se refiere a la máquina en la que estás trabajando.
+{: .prompt-info }
 
 ### Resolución:
 
